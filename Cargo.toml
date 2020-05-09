@@ -1,0 +1,12 @@
+[package]
+name = "loadgen"
+version = "0.1.0"
+authors = ["Christopher Chalmers <c.chalmers@me.com>"]
+edition = "2018"
+
+[dependencies]
+cxx = "0.3.2"
+
+[build-dependencies]
+cxx-build = "0.3.2"
+bindgen = "0.53.2"

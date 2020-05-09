@@ -1,0 +1,46 @@
+diff --git a/loadgen/CMakeLists.txt b/loadgen/CMakeLists.txt
+index 624dd8b..0377cff 100644
+--- a/loadgen/CMakeLists.txt
++++ b/loadgen/CMakeLists.txt
+@@ -46,11 +46,22 @@ set(SOURCE
+   ${CMAKE_BINARY_DIR}/version_generated.cc
+ )
+ 
+-add_library(mlperf_loadgen STATIC ${SOURCE})
++# Based on this alternative build definition:
++# https://github.com/mlperf/inference/blob/master/loadgen/BUILD.gn
++set(PUBLIC_HEADERS
++  ${CMAKE_CURRENT_SOURCE_DIR}/loadgen.h
++  ${CMAKE_CURRENT_SOURCE_DIR}/query_sample.h
++  ${CMAKE_CURRENT_SOURCE_DIR}/query_sample_library.h
++  ${CMAKE_CURRENT_SOURCE_DIR}/system_under_test.h
++  ${CMAKE_CURRENT_SOURCE_DIR}/test_settings.h
++  ${CMAKE_CURRENT_SOURCE_DIR}/bindings/c_api.h
++)
++
++add_library(mlperf_loadgen SHARED ${SOURCE})
+ target_link_libraries(mlperf_loadgen)
+ 
+ # Install library and headers.
+ install(TARGETS mlperf_loadgen
+-	DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+-install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/
+-	DESTINATION ${CMAKE_INSTALL_PREFIX}/include FILES_MATCHING PATTERN "*.h")
++	LIBRARY DESTINATION lib)
++install(FILES ${PUBLIC_HEADERS}
++	DESTINATION include/loadgen)
+diff --git a/loadgen/version_generator.py b/loadgen/version_generator.py
+index b6f0ab6..e3b3b22 100644
+--- a/loadgen/version_generator.py
++++ b/loadgen/version_generator.py
+@@ -97,8 +97,8 @@ def generate_loadgen_version_definitions(cc_filename, loadgen_root):
+ 
+     date_time_now_local = datetime.datetime.now().isoformat()
+     date_time_now_utc = datetime.datetime.utcnow().isoformat()
+-    ofile.write(func_def("BuildDateLocal", "\"" + date_time_now_local + "\""))
+-    ofile.write(func_def("BuildDateUtc", "\"" + date_time_now_utc + "\""))
++    ofile.write(func_def("BuildDateLocal", "\"NA\""))
++    ofile.write(func_def("BuildDateUtc", "\"NA\""))
+ 
+     git_dir = "--git-dir=\"" + loadgen_root + "/../.git\" "
+     git_work_tree = "--work-tree=\"" + loadgen_root + "/..\" "
