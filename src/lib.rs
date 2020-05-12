@@ -1,4 +1,10 @@
-pub mod ffi;
+pub mod ffi {
+    #![allow(non_upper_case_globals)]
+    #![allow(non_camel_case_types)]
+    #![allow(non_snake_case)]
+
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+}
 
 use std::fmt;
 use std::os::raw::c_char;
@@ -33,7 +39,10 @@ impl<'a> Iterator for QuerySamples<'a> {
     type Item = QuerySample;
 
     fn next(&mut self) -> Option<QuerySample> {
-        self.iter.next().map(|q| QuerySample(q.clone()))
+        self.iter.next().map(|q| QuerySample {
+            id: q.id,
+            index: q.index,
+        })
     }
 }
 
@@ -46,7 +55,10 @@ impl<'a> Drop for QuerySamples<'a> {
 /// A query from loadgen. When finished you can mark a query as complete with the data of the
 /// result. This will emit a warning if the query was dropped.
 #[derive(Debug)]
-pub struct QuerySample(mlperf::QuerySample);
+pub struct QuerySample {
+    id: usize,
+    index: usize,
+}
 
 /// Unsafe because providing an incorrect id causes a segfault. The query api is safe because it
 /// uses the id it was created with.
@@ -61,14 +73,14 @@ impl QuerySample {
     /// Get the index of this query. This index corresponds to an index in the query sample
     /// library.
     pub fn index(&self) -> QuerySampleIndex {
-        self.0.index
+        self.index
     }
 
     /// Complete this query with the given data. In test mode this data is used to check accuracy,
     /// otherwise it is dropped.
     pub fn complete(self, data: &[u8]) {
         let response = [QuerySampleResponse {
-            id: self.0.id,
+            id: self.id,
             data: data.as_ptr() as usize,
             size: data.len(),
         }];
@@ -89,10 +101,10 @@ impl Drop for QuerySample {
     fn drop(&mut self) {
         eprintln!(
             "WARNING query on index {} with id {} was not completed",
-            self.0.index, self.0.id
+            self.index, self.id
         );
         let response = [QuerySampleResponse {
-            id: self.0.id,
+            id: self.id,
             data: 0,
             size: 0,
         }];
