@@ -42,10 +42,10 @@ in rec {
     buildInputs = [
       # nixpkgs.pkg-config
       nixpkgs.loadgen
-      # nixpkgs.clang
+      nixpkgs.llvmPackages.clang
       # nixpkgs.llvm
       nixpkgs.cmake
-      nixpkgs.libcxx
+      # nixpkgs.libcxx
     ];
     hardeningDisable = [ "all" ];
     LIBCLANG_PATH = "${nixpkgs.llvmPackages.libclang}/lib";
@@ -60,7 +60,7 @@ in rec {
     buildInputs = [
       nixpkgs.loadgen
       nixpkgs.pkg-config
-      nixpkgs.llvmclang
+      nixpkgs.llvmPackages.clang
       nixpkgs.llvm
     ];
 
