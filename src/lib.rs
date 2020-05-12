@@ -552,3 +552,48 @@ impl Default for TestSettings {
         }
     }
 }
+
+mod test {
+    use super::*;
+    struct TestQSL;
+
+    impl QuerySampleLibrary for TestQSL {
+        fn name(&self) -> &str {
+            "my_qsl"
+        }
+        fn total_samples(&self) -> usize {
+            400
+        }
+        fn performance_samples(&self) -> usize {
+            100
+        }
+        fn load_samples(&mut self, samples: &[QuerySampleIndex]) {
+            eprintln!("load_samples {:?}", samples);
+        }
+        fn unload_samples(&mut self, samples: &[QuerySampleIndex]) {
+            eprintln!("unload_samples {:?}", samples);
+        }
+    }
+
+    struct TestSUT;
+
+    impl SystemUnderTest for TestSUT {
+        fn name(&self) -> &str {
+            "my_sut"
+        }
+        fn issue_query(&mut self, queries: QuerySamples) {
+            eprintln!("issue_query({:?})", queries);
+            queries.into_iter().for_each(|q| q.complete(&[]))
+        }
+        fn report_latency_results(&mut self, latencies: &[i64]) {
+            eprintln!("report_latency({:?})", latencies)
+        }
+    }
+
+    #[test]
+    // run with --nocapture to see output
+    fn test_test() {
+        let settings = TestSettings::default();
+        start_test(&mut TestSUT, &mut TestQSL, settings)
+    }
+}

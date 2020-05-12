@@ -6,7 +6,7 @@ pub mod root {
     #[allow(unused_imports)]
     use self::super::root;
     pub mod std {
-        pub type string = ::std::os::raw::c_void;
+        pub type string = [usize; 3];
         #[allow(unused_imports)]
         use self::super::super::root;
         pub mod __detail {
