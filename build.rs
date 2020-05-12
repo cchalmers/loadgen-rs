@@ -28,8 +28,4 @@ fn main() {
         .expect("Couldn't write bindings!");
 
     println!("cargo:rustc-link-lib=mlperf_loadgen");
-
-    println!("cargo:rerun-if-changed=src/main.rs");
-    println!("cargo:rerun-if-changed=cbits/ccc.h");
-    println!("cargo:rerun-if-changed=cbits/ccc.cc");
 }
