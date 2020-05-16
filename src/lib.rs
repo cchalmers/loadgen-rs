@@ -310,22 +310,24 @@ mod test {
     // run with --nocapture to see output
     fn test_test() {
         let settings = TestSettings::default();
-        start_test(&mut TestSUT, &mut TestQSL, settings)
+        start_test(&mut TestSUT, &mut TestQSL, &settings)
     }
 }
 
 use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 
-pub struct Samples<Create> {
+/// A `QuerySampleLibrary` opinionated wrapper that takes a closure to create a vector of bytes
+/// that represents the same.
+pub struct Samples<Create, T> {
     total_samples: usize,
     performance_samples: usize,
     create: Create,
-    samples: Arc<RwLock<BTreeMap<usize, Arc<Vec<u8>>>>>,
+    samples: Arc<RwLock<BTreeMap<usize, Arc<T>>>>,
 }
 
-impl<Create> Samples<Create> {
-    pub fn new(num_samples: usize, create: Create) -> Samples<Create> {
+impl<Create, T> Samples<Create, T> {
+    pub fn new(num_samples: usize, create: Create) -> Samples<Create, T> {
         Samples {
             total_samples: num_samples,
             performance_samples: num_samples,
@@ -333,9 +335,10 @@ impl<Create> Samples<Create> {
             samples: Arc::new(RwLock::new(BTreeMap::new())),
         }
     }
-    fn create(&mut self, ix: usize)
+
+    fn load(&mut self, ix: usize)
     where
-        Create: FnMut(usize) -> Vec<u8>,
+        Create: FnMut(usize) -> T,
     {
         let v = (self.create)(ix);
         let mut map = self.samples.write().unwrap();
@@ -343,7 +346,7 @@ impl<Create> Samples<Create> {
     }
 }
 
-impl<Create: FnMut(usize) -> Vec<u8> + Sync> QuerySampleLibrary for Samples<Create> {
+impl<Create: FnMut(usize) -> T + Sync, T: Send + Sync> QuerySampleLibrary for Samples<Create, T> {
     fn name(&self) -> &str {
         "samples"
     }
@@ -354,7 +357,7 @@ impl<Create: FnMut(usize) -> Vec<u8> + Sync> QuerySampleLibrary for Samples<Crea
         self.performance_samples
     }
     fn load_samples(&mut self, samples: &[QuerySampleIndex]) {
-        samples.iter().for_each(|ix| self.create(*ix))
+        samples.iter().for_each(|ix| self.load(*ix))
     }
     fn unload_samples(&mut self, samples: &[QuerySampleIndex]) {
         let mut map = self.samples.write().unwrap();
@@ -364,13 +367,13 @@ impl<Create: FnMut(usize) -> Vec<u8> + Sync> QuerySampleLibrary for Samples<Crea
     }
 }
 
-pub struct Query {
-    sample: Arc<Vec<u8>>,
+pub struct Query<T> {
+    sample: Arc<T>,
     query: QuerySample,
 }
 
-impl Query {
-    pub fn sample(&self) -> &Arc<Vec<u8>> {
+impl<T> Query<T> {
+    pub fn sample(&self) -> &Arc<T> {
         &self.sample
     }
 
@@ -379,28 +382,28 @@ impl Query {
     }
 }
 
-impl std::borrow::Borrow<[u8]> for Query {
-    fn borrow(&self) -> &[u8] {
-        &self[..]
-    }
-}
-
-impl std::ops::Deref for Query {
-    type Target = [u8];
-
-    fn deref(&self) -> &[u8] {
+impl<T> std::borrow::Borrow<T> for Query<T> {
+    fn borrow(&self) -> &T {
         &self.sample
     }
 }
 
-pub struct Test<Run, Report> {
-    run: Run,
-    report: Report,
-    library: Arc<RwLock<BTreeMap<usize, Arc<Vec<u8>>>>>,
+impl<T> std::ops::Deref for Query<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.sample
+    }
 }
 
-impl<Run, Report> Test<Run, Report> {
-    pub fn new<Create>(library: &Samples<Create>, run: Run, report: Report) -> Self {
+pub struct Test<T, Run, Report> {
+    run: Run,
+    report: Report,
+    library: Arc<RwLock<BTreeMap<usize, Arc<T>>>>,
+}
+
+impl<T, Run, Report> Test<T, Run, Report> {
+    pub fn new<Create>(library: &Samples<Create, T>, run: Run, report: Report) -> Self {
         Test {
             run,
             report,
@@ -409,7 +412,9 @@ impl<Run, Report> Test<Run, Report> {
     }
 }
 
-impl<Run: FnMut(Query) + Sync, Report: FnMut(&[i64]) + Sync> SystemUnderTest for Test<Run, Report> {
+impl<T: Send + Sync, Run: FnMut(Query<T>) + Sync, Report: FnMut(&[i64]) + Sync> SystemUnderTest
+    for Test<T, Run, Report>
+{
     fn name(&self) -> &str {
         "my_sut"
     }
