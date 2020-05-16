@@ -10,3 +10,6 @@ cxx = "0.3.2"
 [build-dependencies]
 cxx-build = "0.3.2"
 bindgen = "0.53.2"
+
+[dev-dependencies]
+crossbeam = "0.7.3"
