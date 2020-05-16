@@ -1,4 +1,4 @@
-pub mod ffi {
+mod ffi {
     #![allow(non_upper_case_globals)]
     #![allow(non_camel_case_types)]
     #![allow(non_snake_case)]
@@ -9,7 +9,7 @@ pub mod ffi {
 use std::fmt;
 use std::os::raw::c_char;
 
-use ffi::root::mlperf;
+pub use ffi::root::mlperf;
 use mlperf::QuerySampleResponse;
 pub use mlperf::{QuerySampleIndex, TestSettings};
 
@@ -136,11 +136,10 @@ pub trait QuerySampleLibrary: Sync {
 }
 
 /// Starts the test against SystemUnderTest with the specified settings.
-pub fn start_test<QSL, SUT, S>(sut: &mut SUT, qsl: &mut QSL, test_settings: S)
+pub fn start_test<QSL, SUT>(sut: &mut SUT, qsl: &mut QSL, test_settings: &TestSettings)
 where
     QSL: QuerySampleLibrary,
     SUT: SystemUnderTest,
-    S: Into<TestSettings>,
 {
     unsafe extern "C" fn load_samples_callback<QSL>(
         ctx: usize,
@@ -220,10 +219,8 @@ where
         )
     };
 
-    let settings: TestSettings = test_settings.into();
-
     unsafe {
-        mlperf::c::StartTest(raw_sut, raw_qsl, &settings);
+        mlperf::c::StartTest(raw_sut, raw_qsl, test_settings);
         mlperf::c::DestroyQSL(raw_qsl);
         mlperf::c::DestroySUT(raw_sut);
     }
@@ -314,5 +311,117 @@ mod test {
     fn test_test() {
         let settings = TestSettings::default();
         start_test(&mut TestSUT, &mut TestQSL, settings)
+    }
+}
+
+use std::collections::BTreeMap;
+use std::sync::{Arc, RwLock};
+
+pub struct Samples<Create> {
+    total_samples: usize,
+    performance_samples: usize,
+    create: Create,
+    samples: Arc<RwLock<BTreeMap<usize, Arc<Vec<u8>>>>>,
+}
+
+impl<Create> Samples<Create> {
+    pub fn new(num_samples: usize, create: Create) -> Samples<Create> {
+        Samples {
+            total_samples: num_samples,
+            performance_samples: num_samples,
+            create,
+            samples: Arc::new(RwLock::new(BTreeMap::new())),
+        }
+    }
+    fn create(&mut self, ix: usize)
+    where
+        Create: FnMut(usize) -> Vec<u8>,
+    {
+        let v = (self.create)(ix);
+        let mut map = self.samples.write().unwrap();
+        map.insert(ix, Arc::new(v));
+    }
+}
+
+impl<Create: FnMut(usize) -> Vec<u8> + Sync> QuerySampleLibrary for Samples<Create> {
+    fn name(&self) -> &str {
+        "samples"
+    }
+    fn total_samples(&self) -> usize {
+        self.total_samples
+    }
+    fn performance_samples(&self) -> usize {
+        self.performance_samples
+    }
+    fn load_samples(&mut self, samples: &[QuerySampleIndex]) {
+        samples.iter().for_each(|ix| self.create(*ix))
+    }
+    fn unload_samples(&mut self, samples: &[QuerySampleIndex]) {
+        let mut map = self.samples.write().unwrap();
+        samples.iter().for_each(|ix| {
+            map.remove(ix);
+        });
+    }
+}
+
+pub struct Query {
+    sample: Arc<Vec<u8>>,
+    query: QuerySample,
+}
+
+impl Query {
+    pub fn sample(&self) -> &Arc<Vec<u8>> {
+        &self.sample
+    }
+
+    pub fn complete(self, result: &[u8]) {
+        self.query.complete(result)
+    }
+}
+
+impl std::borrow::Borrow<[u8]> for Query {
+    fn borrow(&self) -> &[u8] {
+        &self[..]
+    }
+}
+
+impl std::ops::Deref for Query {
+    type Target = [u8];
+
+    fn deref(&self) -> &[u8] {
+        &self.sample
+    }
+}
+
+pub struct Test<Run, Report> {
+    run: Run,
+    report: Report,
+    library: Arc<RwLock<BTreeMap<usize, Arc<Vec<u8>>>>>,
+}
+
+impl<Run, Report> Test<Run, Report> {
+    pub fn new<Create>(library: &Samples<Create>, run: Run, report: Report) -> Self {
+        Test {
+            run,
+            report,
+            library: library.samples.clone(),
+        }
+    }
+}
+
+impl<Run: FnMut(Query) + Sync, Report: FnMut(&[i64]) + Sync> SystemUnderTest for Test<Run, Report> {
+    fn name(&self) -> &str {
+        "my_sut"
+    }
+    fn issue_query(&mut self, queries: QuerySamples) {
+        queries.into_iter().for_each(|q| {
+            let read_lock = self.library.read().unwrap();
+            let sample = read_lock.get(&q.index()).expect("NO SAMPLE").clone();
+            let q = Query { sample, query: q };
+            (self.run)(q)
+        })
+    }
+    fn report_latency_results(&mut self, latencies: &[i64]) {
+        (self.report)(latencies);
     }
 }
