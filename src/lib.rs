@@ -317,8 +317,9 @@ mod test {
 use std::collections::BTreeMap;
 use std::sync::{Arc, RwLock};
 
-/// A `QuerySampleLibrary` opinionated wrapper that takes a closure to create a vector of bytes
-/// that represents the same.
+/// A `QuerySampleLibrary` opinionated wrapper that takes a closure to create the query data `T`.
+/// Creation of `T` is not timed. Once it has been created it can be used by the test on request.
+/// See the `multi_worker` example for usage.
 pub struct Samples<Create, T> {
     total_samples: usize,
     performance_samples: usize,
@@ -367,6 +368,7 @@ impl<Create: FnMut(usize) -> T + Sync, T: Send + Sync> QuerySampleLibrary for Sa
     }
 }
 
+/// A query that contains the input data. You must `complete` this query when finished.
 pub struct Query<T> {
     sample: Arc<T>,
     query: QuerySample,
@@ -396,6 +398,7 @@ impl<T> std::ops::Deref for Query<T> {
     }
 }
 
+/// An opinionated `SystemUnderTest` helper that takes closures for running and reporting.
 pub struct Test<T, Run, Report> {
     run: Run,
     report: Report,
