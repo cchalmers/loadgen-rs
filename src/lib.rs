@@ -3,8 +3,81 @@ mod ffi {
     #![allow(non_camel_case_types)]
     #![allow(non_snake_case)]
 
-    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+    // include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+    include!("bindings.rs");
 }
+
+#[cxx::bridge(namespace = mlperf)]
+pub mod bridge {
+    struct SharedThing {
+        z: i32,
+        y: Box<ThingR>,
+        x: UniquePtr<ThingC>,
+    }
+
+    extern "C" {
+        include!("cbits/ccc.h");
+
+        type LogSettings;
+
+        type TestSettings = super::TestSettings;
+
+        // type QuerySample;
+        type QuerySampleResponse;
+        type QuerySampleLibrary;
+        type SystemUnderTest;
+
+
+        // type ResponseId;
+        // type QuerySampleIndex;
+        // type QuerySampleLatency;
+
+        // fn QuerySamplesComplete(responses: *mut QuerySampleResponse, response_count: usize);
+
+        /// Starts the test against SystemUnderTest with the specified settings.
+        fn start_test(
+            sut: &mut SystemUnderTest,
+            qsl: &mut QuerySampleLibrary,
+            requested_settings: &TestSettings,
+            log_settings: &LogSettings,
+        );
+
+        // // pub fn new_log(setting: &mut LogSettings);
+        // pub fn new_log() -> UniquePtr<LogSettings>;
+
+        // pub fn start_log_test(
+        //     sut: usize,
+        //     qsl: usize,
+        //     requested_settings: &TestSettings,
+        //     log_settings: &LogSettings,
+        // );
+
+        type ThingC;
+        fn make_demo(appname: &str) -> UniquePtr<ThingC>;
+        fn get_name(thing: &ThingC) -> &CxxString;
+        fn do_thing(state: SharedThing);
+    }
+
+    extern "Rust" {
+        type ThingR;
+        fn print_r(r: &ThingR);
+    }
+}
+
+// use bridge::new_log;
+
+use cxx::{type_id, ExternType};
+
+unsafe impl ExternType for TestSettings {
+    type Id = type_id!("mlperf::TestSettings");
+}
+
+pub struct ThingR;
+
+fn print_r(r: &ThingR) {
+    eprintln!("hi")
+}
+
 
 use std::fmt;
 use std::os::raw::c_char;

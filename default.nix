@@ -60,7 +60,7 @@ in rec {
     buildInputs = [
       nixpkgs.loadgen
       nixpkgs.pkg-config
-      nixpkgs.llvmclang
+      # nixpkgs.llvmclang
       nixpkgs.llvm
     ];
 

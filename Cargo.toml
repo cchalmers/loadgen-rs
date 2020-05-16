@@ -5,10 +5,10 @@ authors = ["Christopher Chalmers <c.chalmers@me.com>"]
 edition = "2018"
 
 [dependencies]
-cxx = "0.3.2"
+cxx = "0.3.3"
 
 [build-dependencies]
-cxx-build = "0.3.2"
+cxx-build = "0.3.3"
 bindgen = "0.53.2"
 
 [dev-dependencies]

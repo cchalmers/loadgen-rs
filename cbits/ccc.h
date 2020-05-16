@@ -25,4 +25,7 @@ void query_samples_complete(QuerySampleResponse &responses, size_t response_coun
 
 void start_test(SystemUnderTest &sut, QuerySampleLibrary &qsl, const TestSettings &requested_settings, const LogSettings &log_settings);
 
+void new_log(mlperf::LogSettings& log_settings);
+void start_log_test(size_t sut, size_t qsl, const TestSettings& settings, const LogSettings& log_settings);
+
 } // namespace org
