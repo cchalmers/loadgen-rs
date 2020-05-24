@@ -3,8 +3,7 @@ mod ffi {
     #![allow(non_camel_case_types)]
     #![allow(non_snake_case)]
 
-    // include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
-    include!("bindings.rs");
+    include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 }
 
 #[cxx::bridge(namespace = mlperf)]
@@ -302,8 +301,8 @@ where
 impl Default for TestSettings {
     fn default() -> TestSettings {
         TestSettings {
-            scenario: mlperf::TestScenario_SingleStream,
-            mode: mlperf::TestMode_PerformanceOnly,
+            scenario: mlperf::TestScenario::SingleStream,
+            mode: mlperf::TestMode::PerformanceOnly,
             single_stream_expected_latency_ns: 1_000_000,
             single_stream_target_latency_percentile: 0.9,
 
