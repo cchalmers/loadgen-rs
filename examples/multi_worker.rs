@@ -23,6 +23,10 @@ fn main() {
     settings.multi_stream_max_async_queries = 6;
     settings.multi_stream_samples_per_query = 4;
 
+    // log settings
+    let mut log_settings = LogSettings::default();
+    log_settings.log_output.prefix.assign("multi_worker_");
+
     // library that generates a boring input
     let mut library = Samples::new(100, |i| vec![i; 8]);
 
@@ -35,5 +39,5 @@ fn main() {
     };
     let mut sut = Test::new(&library, query, report);
 
-    start_test(&mut sut, &mut library, &settings);
+    start_test(&mut sut, &mut library, &settings, &log_settings);
 }

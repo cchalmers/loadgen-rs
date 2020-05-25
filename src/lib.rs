@@ -13,8 +13,10 @@ pub mod bridge {
         include!("cbits/ccc.h");
         fn assign_str(string: &mut CxxString, str: &str);
 
-        // type TestSettings = super::TestSettings;
+        type TestSettings = super::TestSettings;
         // type LogOutputSettings = super::LogOutputSettings;
+
+        fn test_settings_from_file(settings: &mut TestSettings, path: &str, model: &str, scenario: &str) -> i32;
 
         // // type QuerySampleResponse;
         // // type QuerySampleLibrary;
@@ -27,11 +29,6 @@ pub mod bridge {
         fn get_log_settings(settings: &LogSettingsOpaque) -> &LogSettings;
         fn get_log_settings_mut(settings: &mut LogSettingsOpaque) -> &mut LogSettings;
     }
-
-//     extern "Rust" {
-//         type ThingR;
-//         fn print_r(r: &ThingR);
-//     }
 }
 
 use std::ops::{Deref, DerefMut};
@@ -58,6 +55,29 @@ impl std::ops::Deref for ffi::root::std::string {
 impl std::fmt::Debug for ffi::root::std::string {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "{:?}", self.str())
+    }
+}
+
+impl TestSettings {
+    /// Read a config file from the path. The format of the config file is
+    ///
+    /// ```text
+    /// model.scenario.key = value
+    /// ```
+    ///
+    /// where `model` or `scenario` can be replaced with `*` to match any.
+    ///
+    /// ```
+    /// let mut settings = loadgen::TestSettings::default();
+    /// settings.from_config("mlperf.conf", "ssd-mobilenet", "MultiStream");
+    /// assert_eq!(settings.performance_sample_count_override, 256);
+    /// assert_eq!(settings.multi_stream_target_qps, 20.0);
+    /// ```
+    pub fn from_config(&mut self, path: &str, model: &str, scenario: &str) {
+        let res = bridge::test_settings_from_file(self, path, model, scenario);
+        if res != 0 {
+            panic!("from_configi(path: {}) failed with {}", path, res);
+        }
     }
 }
 
@@ -97,6 +117,15 @@ impl DerefMut for CxxLogSettings {
     }
 }
 
+impl LogSettings {
+    /// Note that this isn't `Default` because `LogSettings` shouldn't be owned by rust (it
+    /// contains c strings). Instead it creates a `CxxLogSetting`, which has a `Deref` for
+    /// `LogSettings` so the code you write will basically be the same.
+    pub fn default() -> CxxLogSettings {
+        CxxLogSettings::default()
+    }
+}
+
 use cxx::{type_id, ExternType};
 
 unsafe impl ExternType for LogOutputSettings {
@@ -116,15 +145,24 @@ unsafe impl ExternType for TestSettings {
 }
 
 fn print_test() {
-    let mut ls = CxxLogSettings::default();
+    let mut ls = LogSettings::default();
     ls.log_output.outdir.assign("logs");
     eprintln!("Default LogSettings:\n{:#?}", ls);
+    let mut settings = TestSettings::default();
+    eprintln!("default settings:\n{:#?}", settings);
+    settings.from_config("mlperf.conf", "mobilenet", "MultiStream");
+    eprintln!("config settings:\n{:#?}", settings);
+    // if settings != TestSettings::default() {
+    //     eprintln!("IT CHANGEDINGIGNE");
+    // }
 }
 
 use std::fmt;
 use std::os::raw::c_char;
 
 pub use ffi::root::mlperf;
+pub use ffi::root::std::string;
+
 use mlperf::QuerySampleResponse;
 pub use mlperf::{QuerySampleIndex, TestSettings, LogSettings, LogOutputSettings};
 
@@ -251,7 +289,7 @@ pub trait QuerySampleLibrary: Sync {
 }
 
 /// Starts the test against SystemUnderTest with the specified settings.
-pub fn start_test<QSL, SUT>(sut: &mut SUT, qsl: &mut QSL, test_settings: &TestSettings)
+pub fn start_test<QSL, SUT>(sut: &mut SUT, qsl: &mut QSL, test_settings: &TestSettings, log_settings: &LogSettings)
 where
     QSL: QuerySampleLibrary,
     SUT: SystemUnderTest,
@@ -335,7 +373,7 @@ where
     };
 
     unsafe {
-        mlperf::c::StartTest(raw_sut, raw_qsl, test_settings);
+        mlperf::c::StartTestWithLogSettings(raw_sut, raw_qsl, test_settings, log_settings);
         mlperf::c::DestroyQSL(raw_qsl);
         mlperf::c::DestroySUT(raw_sut);
     }
@@ -427,7 +465,8 @@ mod test {
         print_test();
         // panic!();
         let settings = TestSettings::default();
-        start_test(&mut TestSUT, &mut TestQSL, &settings)
+        let log_settings = LogSettings::default();
+        start_test(&mut TestSUT, &mut TestQSL, &settings, &log_settings)
     }
 }
 
