@@ -13,7 +13,9 @@ namespace mlperf {
         return std::unique_ptr<ThingC>(new ThingC(std::string(appname)));
     }
 
-
+    std::unique_ptr<LogOutputSettings> mk_logout_settings() {
+        return std::unique_ptr<LogOutputSettings>(new LogOutputSettings());
+    }
 
     const std::string &get_name(const ThingC &thing) { return thing.appname; }
 
@@ -22,6 +24,71 @@ namespace mlperf {
     void query_samples_complete(QuerySampleResponse &responses, size_t response_count) {
       QuerySamplesComplete(&responses, response_count);
     }
+
+    void print_log(const LogOutputSettings& lg_output) {
+      std::cerr << "printing the los:\n";
+      std::cerr << lg_output.prefix << "\n";
+    }
+
+    void assign_prefix(LogOutputSettings& los, rust::Str prefix) {
+      los.prefix = std::string(prefix);
+    }
+    void assign_suffix(LogOutputSettings& los, rust::Str suffix) {
+      los.suffix = std::string(suffix);
+    }
+    void assign_outdir(LogOutputSettings& los, rust::Str outdir) {
+      los.outdir = std::string(outdir);
+    }
+    const std::string& prefix(const LogOutputSettings& los) {
+      return los.prefix;
+    }
+
+    void assign_str(std::string& los, rust::Str str) {
+      los.assign(str.data(), str.size());
+    }
+
+    LogSettingsOpaque::LogSettingsOpaque() {}
+
+    std::unique_ptr<LogSettingsOpaque> mk_log_settings() {
+        return std::unique_ptr<LogSettingsOpaque>(new LogSettingsOpaque());
+    }
+
+    const LogSettings& get_log_settings(const LogSettingsOpaque& ls) {
+        return ls.inner;
+    }
+
+    LogSettings& get_log_settings_mut(LogSettingsOpaque& ls) {
+        return ls.inner;
+    }
+
+    const LogOutputSettings& new_log(const int64_t& x) {
+    /* void new_log() { */
+      LogOutputSettings* los = new LogOutputSettings;
+      LogOutputSettings& los_ref = *los;
+      return los_ref;
+      /* std::cerr << lg_output.prefix << "\n"; */
+    }
+
+    /* void print_log(const LogOutputSettings& lg_output) { */
+    /*   std::cerr << lg_output.prefix << "\n"; */
+    /* } */
+
+    /* void print_log(const LogOutputSettings& lg_output) { */
+    /*   std::cerr << lg_output.prefix << "\n"; */
+    /* } */
+
+    LOS::LOS() {}
+    LOS::~LOS() { std::cerr << "done with LOS\n"; }
+    std::unique_ptr<LOS> mk_los() {
+        return std::unique_ptr<LOS>(new LOS());
+    }
+    const LogOutputSettings& get_los(const LOS& thing) { return thing.los; }
+    LogOutputSettings& get_los_mut(LOS& thing) { return thing.los; }
+
+        /* type LOS; */
+
+        /* fn new_los() -> UniquePtr<LOS>; */
+        /* fn get_nm(thing: &LOS) -> &CxxString; */
 
 
 void start_test(SystemUnderTest &sut, QuerySampleLibrary &qsl, const TestSettings &requested_settings, const LogSettings &log_settings) {
@@ -48,11 +115,11 @@ void start_test(SystemUnderTest &sut, QuerySampleLibrary &qsl, const TestSetting
 /* } */
 
 
-/* std::unique_ptr<LogSettings> new_log() { */
-void new_log() {
-  /* return std::unique_ptr<LogSettings> (new LogSettings()) */
-  LogSettings settings;
-  /* return std::unique_ptr<LogSettings>(new settings); */
-}
+/* /1* std::unique_ptr<LogSettings> new_log() { *1/ */
+/* void new_log() { */
+/*   /1* return std::unique_ptr<LogSettings> (new LogSettings()) *1/ */
+/*   LogSettings settings; */
+/*   /1* return std::unique_ptr<LogSettings>(new settings); *1/ */
+/* } */
 
 } // namespace org
