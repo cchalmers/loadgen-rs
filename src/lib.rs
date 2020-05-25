@@ -150,19 +150,6 @@ unsafe impl ExternType for TestSettings {
     type Id = type_id!("mlperf::TestSettings");
 }
 
-fn print_test() {
-    let mut ls = LogSettings::default();
-    ls.log_output.outdir.assign("logs");
-    eprintln!("Default LogSettings:\n{:#?}", ls);
-    let mut settings = TestSettings::default();
-    eprintln!("default settings:\n{:#?}", settings);
-    settings.from_config("mlperf.conf", "mobilenet", "MultiStream");
-    eprintln!("config settings:\n{:#?}", settings);
-    // if settings != TestSettings::default() {
-    //     eprintln!("IT CHANGEDINGIGNE");
-    // }
-}
-
 /// A trait for the system under test. Implementors of this can give this to `start_test` to run a
 /// loadgen test. Note that this will need to talk to a `QuerySampleLibrary` to receive the actual
 /// data corresponding to a query.
@@ -463,8 +450,6 @@ mod test {
     #[test]
     // run with --nocapture to see output
     fn test_test() {
-        print_test();
-        // panic!();
         let settings = TestSettings::default();
         let log_settings = LogSettings::default();
         start_test(&mut TestSUT, &mut TestQSL, &settings, &log_settings)
