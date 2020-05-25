@@ -15,7 +15,7 @@ stdenv.mkDerivation rec {
   '';
 
   # Build shared, in a loadgen include folder without build time in product.
-  patches = [ ./loadgen.patch ];
+  patches = [ ./loadgen.patch ./log_settings.patch ];
 
   cmakeDir = "../loadgen";
 

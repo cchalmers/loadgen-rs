@@ -1,0 +1,32 @@
+diff --git a/loadgen/bindings/c_api.cc b/loadgen/bindings/c_api.cc
+index 268f031..797479b 100644
+--- a/loadgen/bindings/c_api.cc
++++ b/loadgen/bindings/c_api.cc
+@@ -148,6 +148,15 @@ void StartTest(void* sut, void* qsl, const TestSettings& settings) {
+   mlperf::StartTest(sut_cast, qsl_cast, settings, default_log_settings);
+ }
+ 
++// StartTest with provided LogSettings.
++void StartTestWithLogSettings(void* sut, void* qsl, const TestSettings& settings, const LogSettings& log_settings) {
++  SystemUnderTestTrampoline* sut_cast =
++      reinterpret_cast<SystemUnderTestTrampoline*>(sut);
++  QuerySampleLibraryTrampoline* qsl_cast =
++      reinterpret_cast<QuerySampleLibraryTrampoline*>(qsl);
++  mlperf::StartTest(sut_cast, qsl_cast, settings, log_settings);
++}
++
+ void QuerySamplesComplete(QuerySampleResponse* responses,
+                           size_t response_count) {
+   mlperf::QuerySamplesComplete(responses, response_count);
+diff --git a/loadgen/bindings/c_api.h b/loadgen/bindings/c_api.h
+index 5d58337..6f0f643 100644
+--- a/loadgen/bindings/c_api.h
++++ b/loadgen/bindings/c_api.h
+@@ -70,6 +70,7 @@ void DestroyQSL(void* qsl);
+ /// \details This is the C entry point. See mlperf::StartTest for the C++ entry
+ /// point.
+ void StartTest(void* sut, void* qsl, const TestSettings& settings);
++void StartTestWithLogSettings(void* sut, void* qsl, const TestSettings& settings, const LogSettings& log_settings);
+ 
+ }  // namespace c
+ }  // namespace mlperf
