@@ -14,13 +14,12 @@ pub mod bridge {
         fn assign_str(string: &mut CxxString, str: &str);
 
         type TestSettings = super::TestSettings;
-        // type LogOutputSettings = super::LogOutputSettings;
-
-        fn test_settings_from_file(settings: &mut TestSettings, path: &str, model: &str, scenario: &str) -> i32;
-
-        // // type QuerySampleResponse;
-        // // type QuerySampleLibrary;
-        // // type SystemUnderTest;
+        fn test_settings_from_file(
+            settings: &mut TestSettings,
+            path: &str,
+            model: &str,
+            scenario: &str,
+        ) -> i32;
 
         type LogSettingsOpaque;
         type LogSettings = super::LogSettings;
@@ -31,14 +30,24 @@ pub mod bridge {
     }
 }
 
+pub use ffi::root::mlperf;
+pub use ffi::root::std::string;
+use mlperf::QuerySampleResponse;
+pub use mlperf::{LogOutputSettings, LogSettings, QuerySampleIndex, TestSettings};
+
+use cxx::{type_id, ExternType};
+use std::collections::BTreeMap;
+use std::fmt;
 use std::ops::{Deref, DerefMut};
+use std::os::raw::c_char;
+use std::sync::{Arc, RwLock};
 
 impl ffi::root::std::string {
     fn str(&self) -> &cxx::CxxString {
-        unsafe { &*((self as *const _ as *const cxx::CxxString)) }
+        unsafe { &*(self as *const _ as *const cxx::CxxString) }
     }
     fn cxx_mut(&mut self) -> &mut cxx::CxxString {
-        unsafe { &mut *((self as *mut _ as *mut cxx::CxxString)) }
+        unsafe { &mut *(self as *mut _ as *mut cxx::CxxString) }
     }
     pub fn assign(&mut self, str: &str) {
         bridge::assign_str(self.cxx_mut(), str);
@@ -126,8 +135,6 @@ impl LogSettings {
     }
 }
 
-use cxx::{type_id, ExternType};
-
 unsafe impl ExternType for LogOutputSettings {
     type Id = type_id!("mlperf::LogOutputSettings");
 }
@@ -156,15 +163,6 @@ fn print_test() {
     //     eprintln!("IT CHANGEDINGIGNE");
     // }
 }
-
-use std::fmt;
-use std::os::raw::c_char;
-
-pub use ffi::root::mlperf;
-pub use ffi::root::std::string;
-
-use mlperf::QuerySampleResponse;
-pub use mlperf::{QuerySampleIndex, TestSettings, LogSettings, LogOutputSettings};
 
 /// A trait for the system under test. Implementors of this can give this to `start_test` to run a
 /// loadgen test. Note that this will need to talk to a `QuerySampleLibrary` to receive the actual
@@ -214,7 +212,7 @@ pub struct QuerySample {
 }
 
 /// Unsafe because providing an incorrect id causes a segfault. The query api is safe because it
-/// uses the id it was created with.
+/// uses the id that it was created with.
 unsafe fn query_samples_complete(responses: &[QuerySampleResponse]) {
     mlperf::c::QuerySamplesComplete(
         responses.as_ptr() as *mut QuerySampleResponse,
@@ -289,8 +287,12 @@ pub trait QuerySampleLibrary: Sync {
 }
 
 /// Starts the test against SystemUnderTest with the specified settings.
-pub fn start_test<QSL, SUT>(sut: &mut SUT, qsl: &mut QSL, test_settings: &TestSettings, log_settings: &LogSettings)
-where
+pub fn start_test<QSL, SUT>(
+    sut: &mut SUT,
+    qsl: &mut QSL,
+    test_settings: &TestSettings,
+    log_settings: &LogSettings,
+) where
     QSL: QuerySampleLibrary,
     SUT: SystemUnderTest,
 {
@@ -469,9 +471,6 @@ mod test {
         start_test(&mut TestSUT, &mut TestQSL, &settings, &log_settings)
     }
 }
-
-use std::collections::BTreeMap;
-use std::sync::{Arc, RwLock};
 
 /// A `QuerySampleLibrary` opinionated wrapper that takes a closure to create the query data `T`.
 /// Creation of `T` is not timed. Once it has been created it can be used by the test on request.
