@@ -9,120 +9,32 @@ mod ffi {
 
 #[cxx::bridge(namespace = mlperf)]
 pub mod bridge {
-    struct SharedThing {
-        z: i32,
-        y: Box<ThingR>,
-        x: UniquePtr<ThingC>,
-    }
-
     extern "C" {
         include!("cbits/ccc.h");
+        fn assign_str(string: &mut CxxString, str: &str);
 
-        // type LogSettings;
+        // type TestSettings = super::TestSettings;
+        // type LogOutputSettings = super::LogOutputSettings;
 
-        type TestSettings = super::TestSettings;
-        type LogOutputSettings = super::LogOutputSettings;
+        // // type QuerySampleResponse;
+        // // type QuerySampleLibrary;
+        // // type SystemUnderTest;
+
         type LogSettingsOpaque;
         type LogSettings = super::LogSettings;
-        // type CxString = super::ffi::root::std::string;
-
-        // type QuerySample;
-        type QuerySampleResponse;
-        type QuerySampleLibrary;
-        type SystemUnderTest;
-
-        type LOS;
-
-        fn mk_los() -> UniquePtr<LOS>;
-        fn get_los(thing: &LOS) -> &LogOutputSettings;
-        fn get_los_mut(thing: &mut LOS) -> &mut LogOutputSettings;
-        fn assign_outdir(los: &mut LogOutputSettings, outdir: &str);
-        fn assign_prefix(los: &mut LogOutputSettings, prefix: &str);
-        fn assign_suffix(los: &mut LogOutputSettings, suffix: &str);
-        fn assign_str(string: &mut CxxString, str: &str);
-        fn prefix(los: &LogOutputSettings) ->  &CxxString;
-        // fn get_cxstring(string: &CxString) -> &CxxString;
 
         fn mk_log_settings() -> UniquePtr<LogSettingsOpaque>;
         fn get_log_settings(settings: &LogSettingsOpaque) -> &LogSettings;
         fn get_log_settings_mut(settings: &mut LogSettingsOpaque) -> &mut LogSettings;
-
-        // type ResponseId;
-        // type QuerySampleIndex;
-        // type QuerySampleLatency;
-
-        // fn QuerySamplesComplete(responses: *mut QuerySampleResponse, response_count: usize);
-
-        // /// Starts the test against SystemUnderTest with the specified settings.
-        // fn start_test(
-        //     sut: &mut SystemUnderTest,
-        //     qsl: &mut QuerySampleLibrary,
-        //     requested_settings: &TestSettings,
-        //     log_settings: &LogSettings,
-        // );
-
-        // // pub fn new_log(setting: &mut LogSettings);
-        // pub fn new_log() -> UniquePtr<LogSettings>;
-
-        // pub fn start_log_test(
-        //     sut: usize,
-        //     qsl: usize,
-        //     requested_settings: &TestSettings,
-        //     log_settings: &LogSettings,
-        // );
-
-        fn print_log(log: &LogOutputSettings);
-        fn new_log(x: &i64) -> &LogOutputSettings;
-        // const LogOutputSettings& new_log() {
-
-        // fn make_demo(appname: &str) -> UniquePtr<ThingC>;
-
-        type ThingC;
-        fn make_demo(appname: &str) -> UniquePtr<ThingC>;
-        fn get_name(thing: &ThingC) -> &CxxString;
-        fn do_thing(state: SharedThing);
-
-        // fn mk_logout_settings() -> UniquePtr<LogOutputSettings>;
     }
 
-    extern "Rust" {
-        type ThingR;
-        fn print_r(r: &ThingR);
-    }
+//     extern "Rust" {
+//         type ThingR;
+//         fn print_r(r: &ThingR);
+//     }
 }
 
-impl LogOutputSettings {
-    fn prefix(settings: &LogOutputSettings) -> &cxx::CxxString {
-        unsafe { &*(&settings.prefix as *const _ as *const cxx::CxxString) }
-    }
-}
-
-// use bridge::new_log;
-
-// impl ffi::string {
-
-// }
-
-impl std::ops::Deref for bridge::LogSettingsOpaque {
-    type Target = LogSettings;
-    fn deref(&self) -> &LogSettings {
-        unsafe { &*(self as *const _ as *const LogSettings) }
-    }
-}
-
-impl std::ops::DerefMut for bridge::LogSettingsOpaque {
-    fn deref_mut(&mut self) -> &mut LogSettings {
-        unsafe { &mut *(self as *mut _ as *mut LogSettings) }
-    }
-}
-
-impl std::fmt::Debug for bridge::LogSettingsOpaque {
-    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        // use std::ops::Deref;
-        write!(fmt, "{:?}", **self)
-    }
-}
-
+use std::ops::{Deref, DerefMut};
 
 impl ffi::root::std::string {
     fn str(&self) -> &cxx::CxxString {
@@ -131,7 +43,7 @@ impl ffi::root::std::string {
     fn cxx_mut(&mut self) -> &mut cxx::CxxString {
         unsafe { &mut *((self as *mut _ as *mut cxx::CxxString)) }
     }
-    fn assign(&mut self, str: &str) {
+    pub fn assign(&mut self, str: &str) {
         bridge::assign_str(self.cxx_mut(), str);
     }
 }
@@ -146,7 +58,42 @@ impl std::ops::Deref for ffi::root::std::string {
 impl std::fmt::Debug for ffi::root::std::string {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(fmt, "{:?}", self.str())
-        // write!(fmt, "{:?}", "YO")
+    }
+}
+
+/// A wrapper around `LogSettings` which is owned by c++. This is needed becuase there are C++
+/// `std::string`s in the struct. Since this implements `Deref` for `LogSettings` you can access
+/// and modifiy the fields using `.` syntax. To set the strings use `assign`
+///
+/// ```
+/// let mut my_settings = loadgen::CxxLogSettings::default();
+/// my_settings.log_output.outdir.assign("logs");
+/// eprintln!("{:?}", my_settings);
+/// ```
+pub struct CxxLogSettings(cxx::UniquePtr<bridge::LogSettingsOpaque>);
+
+impl Default for CxxLogSettings {
+    fn default() -> CxxLogSettings {
+        CxxLogSettings(bridge::mk_log_settings())
+    }
+}
+
+impl std::fmt::Debug for CxxLogSettings {
+    fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(fmt, "{:?}", self.deref())
+    }
+}
+
+impl Deref for CxxLogSettings {
+    type Target = LogSettings;
+    fn deref(&self) -> &LogSettings {
+        bridge::get_log_settings(&self.0)
+    }
+}
+
+impl DerefMut for CxxLogSettings {
+    fn deref_mut(&mut self) -> &mut LogSettings {
+        bridge::get_log_settings_mut(&mut self.0)
     }
 }
 
@@ -169,45 +116,10 @@ unsafe impl ExternType for TestSettings {
 }
 
 fn print_test() {
-    let mut ls = bridge::mk_log_settings();
-    // let ls_ref = bridge::get_log_settings_mut(&mut ls);
-
-    // eprintln!("Default LogSettings:\n{:#?}", **ls);
+    let mut ls = CxxLogSettings::default();
+    ls.log_output.outdir.assign("logs");
     eprintln!("Default LogSettings:\n{:#?}", ls);
-
-    let mut los = bridge::mk_los();
-    let los_ref = bridge::get_los_mut(&mut los);
-
-    los_ref.outdir.assign("my_cool_outdir");
-    los_ref.prefix.assign("lalala_");
-    los_ref.suffix.assign("SUFFIX");
-
-    eprintln!("my cxx {:#x?} has addr {:p}", los_ref.prefix.0, los_ref.prefix.str());
-    // bridge::assign_prefix(los_ref, "yoyoyo_");
-    eprintln!("my cxx {:#x?} has addr {:p}", los_ref.prefix.0, los_ref.prefix.str());
-    let prefix = bridge::prefix(los_ref);
-    eprintln!("&setting.prefix as addr {:p}", &los_ref.prefix);
-    eprintln!("&setting.prefix as addr {:p}", unsafe { &*((&los_ref.prefix) as *const _ as *const cxx::CxxString) });
-    eprintln!("the cxx string {:?} has addr {:p}", prefix, prefix);
-    eprintln!("my cxx {:#x?} has addr {:p}", los_ref.prefix.0, los_ref.prefix.str());
-    let prefix_ptr = prefix as *const cxx::CxxString as *const *const *const ffi::root::std::string;
-    eprintln!("the CxxString points to {:p}", unsafe {*prefix_ptr});
-    eprintln!("{:?}", los_ref);
-    bridge::print_log(los_ref);
-
-    // let x = 0;
-    // let los = bridge::new_log(&x);
-    // let my_los = *los;
-    // eprintln!("{:?}", my_los);
-    // bridge::print_log(&my_los)
 }
-
-pub struct ThingR;
-
-fn print_r(r: &ThingR) {
-    eprintln!("hi")
-}
-
 
 use std::fmt;
 use std::os::raw::c_char;
@@ -513,7 +425,7 @@ mod test {
     // run with --nocapture to see output
     fn test_test() {
         print_test();
-        panic!();
+        // panic!();
         let settings = TestSettings::default();
         start_test(&mut TestSUT, &mut TestQSL, &settings)
     }

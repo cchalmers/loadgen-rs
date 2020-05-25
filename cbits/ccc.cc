@@ -4,45 +4,6 @@
 #include <loadgen/c_api.h>
 
 namespace mlperf {
-
-    ThingC::ThingC(std::string appname) : appname(std::move(appname)) {}
-
-    ThingC::~ThingC() { std::cout << "done with ThingC" << std::endl; }
-
-    std::unique_ptr<ThingC> make_demo(rust::Str appname) {
-        return std::unique_ptr<ThingC>(new ThingC(std::string(appname)));
-    }
-
-    std::unique_ptr<LogOutputSettings> mk_logout_settings() {
-        return std::unique_ptr<LogOutputSettings>(new LogOutputSettings());
-    }
-
-    const std::string &get_name(const ThingC &thing) { return thing.appname; }
-
-    void do_thing(SharedThing state) { print_r(*state.y); }
-
-    void query_samples_complete(QuerySampleResponse &responses, size_t response_count) {
-      QuerySamplesComplete(&responses, response_count);
-    }
-
-    void print_log(const LogOutputSettings& lg_output) {
-      std::cerr << "printing the los:\n";
-      std::cerr << lg_output.prefix << "\n";
-    }
-
-    void assign_prefix(LogOutputSettings& los, rust::Str prefix) {
-      los.prefix = std::string(prefix);
-    }
-    void assign_suffix(LogOutputSettings& los, rust::Str suffix) {
-      los.suffix = std::string(suffix);
-    }
-    void assign_outdir(LogOutputSettings& los, rust::Str outdir) {
-      los.outdir = std::string(outdir);
-    }
-    const std::string& prefix(const LogOutputSettings& los) {
-      return los.prefix;
-    }
-
     void assign_str(std::string& los, rust::Str str) {
       los.assign(str.data(), str.size());
     }
@@ -61,34 +22,34 @@ namespace mlperf {
         return ls.inner;
     }
 
-    const LogOutputSettings& new_log(const int64_t& x) {
-    /* void new_log() { */
-      LogOutputSettings* los = new LogOutputSettings;
-      LogOutputSettings& los_ref = *los;
-      return los_ref;
-      /* std::cerr << lg_output.prefix << "\n"; */
-    }
-
-    /* void print_log(const LogOutputSettings& lg_output) { */
-    /*   std::cerr << lg_output.prefix << "\n"; */
+    /* const LogOutputSettings& new_log(const int64_t& x) { */
+    /* /1* void new_log() { *1/ */
+    /*   LogOutputSettings* los = new LogOutputSettings; */
+    /*   LogOutputSettings& los_ref = *los; */
+    /*   return los_ref; */
+    /*   /1* std::cerr << lg_output.prefix << "\n"; *1/ */
     /* } */
 
-    /* void print_log(const LogOutputSettings& lg_output) { */
-    /*   std::cerr << lg_output.prefix << "\n"; */
+    /* /1* void print_log(const LogOutputSettings& lg_output) { *1/ */
+    /* /1*   std::cerr << lg_output.prefix << "\n"; *1/ */
+    /* /1* } *1/ */
+
+    /* /1* void print_log(const LogOutputSettings& lg_output) { *1/ */
+    /* /1*   std::cerr << lg_output.prefix << "\n"; *1/ */
+    /* /1* } *1/ */
+
+    /* LOS::LOS() {} */
+    /* LOS::~LOS() { std::cerr << "done with LOS\n"; } */
+    /* std::unique_ptr<LOS> mk_los() { */
+    /*     return std::unique_ptr<LOS>(new LOS()); */
     /* } */
+    /* const LogOutputSettings& get_los(const LOS& thing) { return thing.los; } */
+    /* LogOutputSettings& get_los_mut(LOS& thing) { return thing.los; } */
 
-    LOS::LOS() {}
-    LOS::~LOS() { std::cerr << "done with LOS\n"; }
-    std::unique_ptr<LOS> mk_los() {
-        return std::unique_ptr<LOS>(new LOS());
-    }
-    const LogOutputSettings& get_los(const LOS& thing) { return thing.los; }
-    LogOutputSettings& get_los_mut(LOS& thing) { return thing.los; }
+    /*     /1* type LOS; *1/ */
 
-        /* type LOS; */
-
-        /* fn new_los() -> UniquePtr<LOS>; */
-        /* fn get_nm(thing: &LOS) -> &CxxString; */
+    /*     /1* fn new_los() -> UniquePtr<LOS>; *1/ */
+    /*     /1* fn get_nm(thing: &LOS) -> &CxxString; *1/ */
 
 
 void start_test(SystemUnderTest &sut, QuerySampleLibrary &qsl, const TestSettings &requested_settings, const LogSettings &log_settings) {
