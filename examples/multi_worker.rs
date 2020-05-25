@@ -19,7 +19,7 @@ fn main() {
 
     // multi-stream settings
     let mut settings = TestSettings::default();
-    settings.scenario = mlperf::TestScenario_MultiStream;
+    settings.scenario = mlperf::TestScenario::MultiStream;
     settings.multi_stream_max_async_queries = 6;
     settings.multi_stream_samples_per_query = 4;
 
