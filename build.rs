@@ -41,7 +41,6 @@ fn main() {
         .generate()
         .expect("Unable to generate bindings");
 
-
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
     let bindings_path = out_path.join("bindings.rs");
@@ -52,8 +51,8 @@ fn main() {
     // bindgen's `opaque_type` doesn't seems to woth with `new_type_alias` so manually patch it.
     // Also add some documentation and make the interior non-public (which bindgen's type alias
     // doesn't do).
-    let string_match = "pub type string = \\(.*\\);";
-    let string_replacement = "#[repr(transparent)]\\n/// A C++ string\\npub struct string(\\1);";
+    let string_match = "pub type string = \\[\\(.*\\)\\] *;";
+    let string_replacement = "#[repr(transparent)]\\n/// A C++ stringpub struct string([\\1]);";
     let sed_expr = format!("s:{}:{}:", string_match, string_replacement);
 
     let output = std::process::Command::new("sed")
