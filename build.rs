@@ -52,7 +52,7 @@ fn main() {
     // Also add some documentation and make the interior non-public (which bindgen's type alias
     // doesn't do).
     let string_match = "pub type string = \\[\\(.*\\)\\] *;";
-    let string_replacement = "#[repr(transparent)]\\n/// A C++ stringpub struct string([\\1]);";
+    let string_replacement = "#[repr(transparent)]\\n/// A C++ string\\npub struct string([\\1]);";
     let sed_expr = format!("s:{}:{}:", string_match, string_replacement);
 
     let output = std::process::Command::new("sed")
