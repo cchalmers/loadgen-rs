@@ -21,7 +21,6 @@ fn main() {
         .opaque_type("std::string")
         // this doesn't seem to work so we patch it later instead
         // .new_type_alias("std::string")
-
         // don't copy because it constains a c++ std::string
         .no_copy("mlperf::LogOutputSettings")
         .no_copy("mlperf::LogSettings")
@@ -37,7 +36,9 @@ fn main() {
         .clang_arg("-x")
         .clang_arg("c++")
         .layout_tests(false)
-        .default_enum_style(bindgen::EnumVariation::Rust { non_exhaustive: true })
+        .default_enum_style(bindgen::EnumVariation::Rust {
+            non_exhaustive: true,
+        })
         .generate()
         .expect("Unable to generate bindings");
 
@@ -56,7 +57,11 @@ fn main() {
     let sed_expr = format!("s:{}:{}:", string_match, string_replacement);
 
     let output = std::process::Command::new("sed")
-        .args(&["-ie", &sed_expr, bindings_path.to_str().expect("bad bindings path")])
+        .args(&[
+            "-ie",
+            &sed_expr,
+            bindings_path.to_str().expect("bad bindings path"),
+        ])
         .output()
         .expect("failed to patch bindings");
 

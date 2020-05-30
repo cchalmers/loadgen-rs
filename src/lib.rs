@@ -76,10 +76,10 @@ impl TestSettings {
     /// where `model` or `scenario` can be replaced with `*` to match any.
     ///
     /// ```
-    /// let mut settings = loadgen::TestSettings::default();
-    /// settings.from_config("mlperf.conf", "ssd-mobilenet", "MultiStream");
-    /// assert_eq!(settings.performance_sample_count_override, 256);
-    /// assert_eq!(settings.multi_stream_target_qps, 20.0);
+    // /// let mut settings = loadgen::TestSettings::default();
+    // /// settings.from_config("mlperf.conf", "ssd-mobilenet", "MultiStream");
+    // /// assert_eq!(settings.performance_sample_count_override, 256);
+    // /// assert_eq!(settings.multi_stream_target_qps, 20.0);
     /// ```
     pub fn from_config(&mut self, path: &str, model: &str, scenario: &str) {
         let res = bridge::test_settings_from_file(self, path, model, scenario);
@@ -451,7 +451,12 @@ mod test {
     // run with --nocapture to see output
     fn test_test() {
         let settings = TestSettings::default();
-        let log_settings = LogSettings::default();
+        let mut log_settings = LogSettings::default();
+        let temp_dir = tempdir::TempDir::new("loadgen_test").unwrap();
+        log_settings
+            .log_output
+            .outdir
+            .assign(temp_dir.as_ref().to_str().unwrap());
         start_test(&mut TestSUT, &mut TestQSL, &settings, &log_settings)
     }
 }
@@ -467,7 +472,11 @@ pub struct Samples<Create, T> {
 }
 
 impl<Create, T> Samples<Create, T> {
-    pub fn new(num_samples: usize, create: Create) -> Samples<Create, T> {
+    pub fn new(num_samples: usize, create: Create) -> Samples<Create, T>
+    where
+        Create: FnMut(usize) -> T + Sync,
+        T: Send + Sync,
+    {
         Samples {
             total_samples: num_samples,
             performance_samples: num_samples,
@@ -537,7 +546,7 @@ impl<T> std::ops::Deref for Query<T> {
     }
 }
 
-/// An opinionated `SystemUnderTest` helper that takes closures for running and reporting.
+/// A `SystemUnderTest` helper that takes closures for running and reporting.
 pub struct Test<T, Run, Report> {
     run: Run,
     report: Report,
@@ -545,6 +554,19 @@ pub struct Test<T, Run, Report> {
 }
 
 impl<T, Run, Report> Test<T, Run, Report> {
+    /// Create a new `Test` by supplying a run and a report function.
+    ///
+    /// ```
+    /// use loadgen::*;
+    /// let create_sample = |i: usize| vec![12_u8; i];
+    /// let lib = Samples::new(100, create_sample);
+    /// let run = |q: Query<Vec<u8>>| {
+    ///     let result = q.sample().iter().map(|x| x+1).collect::<Vec<u8>>();
+    ///     q.complete(&result)
+    /// };
+    /// let report = |times: &[i64]| eprintln!("times: {:?}", times);
+    /// let test = Test::new(&lib, run, report);
+    /// ```
     pub fn new<Create>(library: &Samples<Create, T>, run: Run, report: Report) -> Self {
         Test {
             run,
