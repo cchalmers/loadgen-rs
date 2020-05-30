@@ -7,7 +7,7 @@
 
 namespace mlperf {
 
-void assign_str(std::string& los, rust::Str str);
+void assign_str(std::string& los, rust::Slice<uint8_t> str);
 
 class LogSettingsOpaque {
 public:

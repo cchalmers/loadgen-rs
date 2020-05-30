@@ -39,5 +39,5 @@ fn main() {
     };
     let mut sut = Test::new(&library, query, report);
 
-    // start_test(&mut sut, &mut library, &settings, &log_settings);
+    start_test(&mut sut, &mut library, &settings, &log_settings);
 }

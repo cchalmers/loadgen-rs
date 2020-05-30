@@ -3,8 +3,8 @@
 #include <loadgen/c_api.h>
 
 namespace mlperf {
-  void assign_str(std::string& los, rust::Str str) {
-    los.assign(str.data(), str.size());
+  void assign_str(std::string& los, rust::Slice<uint8_t> str) {
+    los.assign((char*)str.data(), str.size());
   }
 
   LogSettingsOpaque::LogSettingsOpaque() {}

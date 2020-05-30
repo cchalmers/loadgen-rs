@@ -10,7 +10,7 @@ mod ffi {
 pub mod bridge {
     extern "C" {
         include!("cbits/ccc.h");
-        fn assign_str(string: &mut CxxString, str: &str);
+        fn assign_str(string: &mut CxxString, str: &[u8]);
 
         type TestSettings = super::TestSettings;
         fn test_settings_from_file(
@@ -48,8 +48,8 @@ impl ffi::root::std::string {
     fn cxx_mut(&mut self) -> &mut cxx::CxxString {
         unsafe { &mut *(self as *mut _ as *mut cxx::CxxString) }
     }
-    pub fn assign(&mut self, str: &str) {
-        bridge::assign_str(self.cxx_mut(), str);
+    pub fn assign<S: AsRef<[u8]>>(&mut self, str: S) {
+        bridge::assign_str(self.cxx_mut(), str.as_ref());
     }
 }
 
@@ -76,10 +76,10 @@ impl TestSettings {
     /// where `model` or `scenario` can be replaced with `*` to match any.
     ///
     /// ```
-    // /// let mut settings = loadgen::TestSettings::default();
-    // /// settings.from_config("mlperf.conf", "ssd-mobilenet", "MultiStream");
-    // /// assert_eq!(settings.performance_sample_count_override, 256);
-    // /// assert_eq!(settings.multi_stream_target_qps, 20.0);
+    /// let mut settings = loadgen::TestSettings::default();
+    /// settings.from_config("mlperf.conf", "ssd-mobilenet", "MultiStream");
+    /// assert_eq!(settings.performance_sample_count_override, 256);
+    /// assert_eq!(settings.multi_stream_target_qps, 20.0);
     /// ```
     pub fn from_config(&mut self, path: &str, model: &str, scenario: &str) {
         let res = bridge::test_settings_from_file(self, path, model, scenario);
